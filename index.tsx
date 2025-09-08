@@ -8,10 +8,30 @@ import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
 import { jsPDF } from 'jspdf';
 
-const CoverLetter = ({ content }: { content: string }) => {
+const CoverLetter = ({
+  content,
+  fullName,
+  phone,
+  email
+}: {
+  content: string;
+  fullName: string;
+  phone: string;
+  email: string;
+}) => {
   const lines = content.split('\n');
   return (
     <div className="cover-letter-styled">
+      {(fullName || phone || email) && (
+        <header className="cover-letter-header">
+          {fullName && <h1>{fullName}</h1>}
+          <div className="contact-info">
+            {phone && <span>{phone}</span>}
+            {phone && email && <span>&nbsp;•&nbsp;</span>}
+            {email && <span>{email}</span>}
+          </div>
+        </header>
+      )}
       {lines.map((line, index) => (
         <p key={index}>{line || '\u00A0'}</p> 
       ))}
@@ -20,6 +40,9 @@ const CoverLetter = ({ content }: { content: string }) => {
 };
 
 const App = () => {
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [masterDocument, setMasterDocument] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -160,7 +183,7 @@ const App = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadCoverLetterPDF = (content: string) => {
+  const handleDownloadCoverLetterPDF = (content: string, fullName: string, phone: string, email: string) => {
     const sanitizeFilename = (name: string) => name.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
     const filename = `${sanitizeFilename(companyInfo.company)}_${sanitizeFilename(companyInfo.role)}.pdf`;
 
@@ -173,42 +196,59 @@ const App = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Using standard 1-inch margins (approx 25mm) for a professional look
     const margin = 25; 
     const usableWidth = pageWidth - (margin * 2);
 
+    let y = margin;
+
+    // --- Add Header ---
+    if (fullName) {
+        doc.setFont('times', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor('#2c3e50'); // A dark slate color
+        doc.text(fullName, pageWidth / 2, y, { align: 'center' });
+        y += 10;
+    }
+
+    if (phone || email) {
+        const contactLine = `${phone}${phone && email ? ' • ' : ''}${email}`;
+        doc.setFont('times', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor('#34495e'); // A slightly lighter slate color
+        doc.text(contactLine, pageWidth / 2, y, { align: 'center' });
+        y += 5;
+    }
+    
+    // Add a separator line
+    if (fullName || phone || email) {
+        doc.setDrawColor('#bdc3c7'); // A light grey
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10; // Add some space after the line
+    }
+
+    // --- Render Body ---
     doc.setFont('times', 'normal');
     doc.setFontSize(12);
-
-    const lineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
+    doc.setTextColor('#333333'); // Reset text color for body
     
-    let y = margin; // Start cursor at top margin
-
-    // The AI generates text with newlines for paragraphs.
+    const lineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
     const paragraphs = content.split('\n');
 
     paragraphs.forEach(paragraph => {
-      // An empty string from split('\n') represents a paragraph break.
       if (paragraph.trim() === '') {
-        // Add a space for a paragraph break, but only if it doesn't overflow
         if (y + lineHeight <= pageHeight - margin) {
           y += lineHeight;
         }
-        return; // Continue to next paragraph
+        return;
       }
 
       const lines = doc.splitTextToSize(paragraph, usableWidth);
-      
-      // Check if the whole text block fits, if not, add a new page.
       const blockHeight = lines.length * lineHeight;
       if (y + blockHeight > pageHeight - margin) {
         doc.addPage();
-        y = margin; // Reset y to top margin on new page
+        y = margin;
       }
-
-      // Render the lines of the current paragraph
       lines.forEach((line: string) => {
-        // A single line might still overflow if the block check was borderline, so check again.
          if (y + lineHeight > pageHeight - margin) {
             doc.addPage();
             y = margin;
@@ -232,6 +272,20 @@ const App = () => {
       </header>
       <main>
         <div className="panel input-panel">
+          <div className="personal-info-section">
+            <div className="input-group full-width">
+              <label htmlFor="full-name">Your Full Name</label>
+              <input type="text" id="full-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g., Jane Doe" />
+            </div>
+            <div className="input-group">
+              <label htmlFor="phone">Contact Number</label>
+              <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., (555) 123-4567" />
+            </div>
+            <div className="input-group">
+              <label htmlFor="email">Email Address</label>
+              <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., jane.doe@example.com" />
+            </div>
+          </div>
           <div className="input-group">
             <label htmlFor="master-doc">Your Master Document</label>
             <textarea
@@ -313,7 +367,7 @@ const App = () => {
                         if (activeTab === 'resume') {
                             handleDownloadTxt(displayedContent, 'resume.txt');
                         } else {
-                            handleDownloadCoverLetterPDF(displayedContent);
+                            handleDownloadCoverLetterPDF(displayedContent, fullName, phone, email);
                         }
                     }}
                     aria-label={`Download ${activeTab}`}
@@ -324,7 +378,12 @@ const App = () => {
                 {activeTab === 'resume' ? (
                   <pre className="resume-content">{displayedContent}</pre>
                 ) : (
-                  <CoverLetter content={displayedContent} />
+                  <CoverLetter
+                    content={displayedContent}
+                    fullName={fullName}
+                    phone={phone}
+                    email={email}
+                  />
                 )}
               </>
             ) : (

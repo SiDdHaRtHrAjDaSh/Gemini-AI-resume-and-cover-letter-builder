@@ -92,16 +92,33 @@ main {
   font-size: 1rem;
 }
 
-textarea {
+textarea,
+.personal-info-section input {
   width: 100%;
   padding: 0.75rem;
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
   font-family: var(--font-family);
   font-size: 0.95rem;
-  resize: vertical;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+textarea {
+  resize: vertical;
+}
+
+.personal-info-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1.5rem;
+}
+
+.personal-info-section .full-width {
+  grid-column: 1 / -1;
+}
+
 
 #master-doc,
 #job-desc {
@@ -112,13 +129,15 @@ textarea {
   height: 120px;
 }
 
-textarea:focus {
+textarea:focus,
+.personal-info-section input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }
 
-textarea::placeholder {
+textarea::placeholder,
+.personal-info-section input::placeholder {
   color: var(--placeholder-color);
 }
 
@@ -208,6 +227,27 @@ textarea::placeholder {
   line-height: 1.6;
   font-size: 1rem;
   color: #222;
+}
+
+.cover-letter-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cover-letter-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50; /* Dark Slate */
+  margin: 0;
+}
+
+.cover-letter-header .contact-info {
+  font-size: 0.9rem;
+  color: #34495e; /* Lighter Slate */
+  margin-top: 0.5rem;
+  font-family: var(--font-family);
 }
 
 .cover-letter-styled p {
