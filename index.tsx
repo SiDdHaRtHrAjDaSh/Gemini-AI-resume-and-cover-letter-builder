@@ -6,6 +6,18 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
+import { jsPDF } from 'jspdf';
+
+const CoverLetter = ({ content }: { content: string }) => {
+  const lines = content.split('\n');
+  return (
+    <div className="cover-letter-styled">
+      {lines.map((line, index) => (
+        <p key={index}>{line || '\u00A0'}</p> 
+      ))}
+    </div>
+  );
+};
 
 const App = () => {
   const [masterDocument, setMasterDocument] = useState('');
@@ -17,6 +29,7 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'resume' | 'coverLetter'>('resume');
   const [copySuccess, setCopySuccess] = useState('');
+  const [companyInfo, setCompanyInfo] = useState({ company: 'company', role: 'role' });
 
   const handleGenerate = async () => {
     if (!masterDocument || !jobDescription) {
@@ -46,6 +59,7 @@ const App = () => {
         The resume should be well-structured, professional, and highlight the most relevant experiences and skills for the target job. Use clear headings and bullet points.
         The cover letter should be professional, engaging, and directly address the requirements in the job description, explaining why the candidate is a perfect fit.
 
+        for the cover letter avoid using dashes(hyphens) make it sound human and also always add a Dear Hiring Manager as the salutation.
         Master Document:
         ---
         ${masterDocument}
@@ -85,6 +99,38 @@ const App = () => {
       setGeneratedResume(jsonResponse.resume);
       setGeneratedCoverLetter(jsonResponse.coverLetter);
 
+      // Second call to extract company info
+      const infoPrompt = `From the following job description, extract the company name and the job title/role. If a value cannot be found, return 'unknown'.
+      Job Description:
+      ---
+      ${jobDescription}
+      ---
+      Provide the output in JSON format.`;
+
+      const infoResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: infoPrompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    companyName: {
+                        type: Type.STRING,
+                        description: "The name of the company.",
+                    },
+                    role: {
+                        type: Type.STRING,
+                        description: "The job title or role.",
+                    },
+                },
+                required: ["companyName", "role"],
+            },
+        },
+      });
+      const infoJson = JSON.parse(infoResponse.text);
+      setCompanyInfo({ company: infoJson.companyName, role: infoJson.role });
+
     } catch (e) {
       console.error(e);
       setError('An error occurred while generating the documents. Please try again.');
@@ -101,6 +147,80 @@ const App = () => {
       console.error('Failed to copy: ', err);
     });
   };
+
+  const handleDownloadTxt = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCoverLetterPDF = (content: string) => {
+    const sanitizeFilename = (name: string) => name.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+    const filename = `${sanitizeFilename(companyInfo.company)}_${sanitizeFilename(companyInfo.role)}.pdf`;
+
+    const doc = new jsPDF({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Using standard 1-inch margins (approx 25mm) for a professional look
+    const margin = 25; 
+    const usableWidth = pageWidth - (margin * 2);
+
+    doc.setFont('times', 'normal');
+    doc.setFontSize(12);
+
+    const lineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
+    
+    let y = margin; // Start cursor at top margin
+
+    // The AI generates text with newlines for paragraphs.
+    const paragraphs = content.split('\n');
+
+    paragraphs.forEach(paragraph => {
+      // An empty string from split('\n') represents a paragraph break.
+      if (paragraph.trim() === '') {
+        // Add a space for a paragraph break, but only if it doesn't overflow
+        if (y + lineHeight <= pageHeight - margin) {
+          y += lineHeight;
+        }
+        return; // Continue to next paragraph
+      }
+
+      const lines = doc.splitTextToSize(paragraph, usableWidth);
+      
+      // Check if the whole text block fits, if not, add a new page.
+      const blockHeight = lines.length * lineHeight;
+      if (y + blockHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin; // Reset y to top margin on new page
+      }
+
+      // Render the lines of the current paragraph
+      lines.forEach((line: string) => {
+        // A single line might still overflow if the block check was borderline, so check again.
+         if (y + lineHeight > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+        }
+        doc.text(line, margin, y);
+        y += lineHeight;
+      });
+    });
+    
+    doc.save(filename);
+  };
+
 
   const displayedContent = activeTab === 'resume' ? generatedResume : generatedCoverLetter;
 
@@ -179,14 +299,33 @@ const App = () => {
           >
              {displayedContent ? (
               <>
-                <button
-                  className="copy-button"
-                  onClick={() => handleCopyToClipboard(displayedContent)}
-                  aria-label={`Copy ${activeTab} to clipboard`}
-                >
-                  {copySuccess && copySuccess.includes(activeTab) ? 'Copied!' : 'Copy'}
-                </button>
-                {displayedContent}
+                <div className="output-actions">
+                  <button
+                    className="copy-button"
+                    onClick={() => handleCopyToClipboard(displayedContent)}
+                    aria-label={`Copy ${activeTab} to clipboard`}
+                  >
+                    {copySuccess && copySuccess.includes(activeTab) ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    className="download-button"
+                    onClick={() => {
+                        if (activeTab === 'resume') {
+                            handleDownloadTxt(displayedContent, 'resume.txt');
+                        } else {
+                            handleDownloadCoverLetterPDF(displayedContent);
+                        }
+                    }}
+                    aria-label={`Download ${activeTab}`}
+                  >
+                    Download as {activeTab === 'resume' ? '.txt' : '.pdf'}
+                  </button>
+                </div>
+                {activeTab === 'resume' ? (
+                  <pre className="resume-content">{displayedContent}</pre>
+                ) : (
+                  <CoverLetter content={displayedContent} />
+                )}
               </>
             ) : (
                <p style={{color: '#6b7280', textAlign: 'center', marginTop: '2rem'}}>
