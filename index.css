@@ -93,7 +93,9 @@ main {
 }
 
 textarea,
-.personal-info-section input {
+input[type="text"],
+input[type="email"],
+input[type="tel"] {
   width: 100%;
   padding: 0.75rem;
   border-radius: var(--border-radius);
@@ -130,14 +132,16 @@ textarea {
 }
 
 textarea:focus,
-.personal-info-section input:focus {
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }
 
 textarea::placeholder,
-.personal-info-section input::placeholder {
+input::placeholder {
   color: var(--placeholder-color);
 }
 
@@ -291,4 +295,105 @@ textarea::placeholder,
   padding: 0.75rem;
   border-radius: var(--border-radius);
   border: 1px solid var(--error-color);
+}
+
+/* Question Input Section Styles */
+.question-input-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.question-input-container input {
+  flex-grow: 1;
+}
+
+.add-question-btn {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border: 1px solid var(--border-color);
+  padding: 0.7rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.add-question-btn:hover {
+  background-color: #d1d5db;
+}
+
+.questions-list {
+  list-style: none;
+  margin-top: 1rem;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.question-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9fafb;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.question-item span {
+  flex-grow: 1;
+  padding-right: 0.5rem;
+}
+
+.remove-question-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 0.25rem;
+  transition: color 0.2s;
+}
+
+.remove-question-btn:hover {
+  color: var(--error-color);
+}
+
+/* Q&A Output Styles */
+.qna-list {
+  font-family: var(--font-family);
+  color: #333;
+}
+
+.qna-item {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1.5rem;
+}
+
+.qna-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.qna-question {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 1.05rem;
+}
+
+.qna-answer {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.7;
+  color: #4b5563;
 }
