@@ -265,6 +265,11 @@ input::placeholder { color: var(--placeholder-color); }
   display: flex;
   border-bottom: 1px solid var(--border-color);
   padding: 0 1rem;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+.tabs::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }
 .tab {
   padding: 0.75rem 1.5rem;
@@ -277,6 +282,7 @@ input::placeholder { color: var(--placeholder-color); }
   color: var(--text-secondary);
   transition: color var(--transition-speed), border-color var(--transition-speed);
   margin-bottom: -1px;
+  white-space: nowrap;
 }
 .tab.active {
   color: var(--primary-color);
@@ -292,6 +298,41 @@ input::placeholder { color: var(--placeholder-color); }
   padding: 3.5rem 1.5rem 1.5rem;
   overflow-x: auto;
   margin: 1rem;
+}
+
+/* --- Cover Letter Tone Selector --- */
+.tone-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+.tone-option {
+  cursor: pointer;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  transition: border-color var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed);
+  background-color: var(--background-color);
+  font-family: var(--font-family);
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+.tone-option.selected {
+  border-color: var(--primary-color);
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+.tone-option:hover:not(.selected) {
+  border-color: var(--primary-color);
+  background-color: color-mix(in srgb, var(--primary-color) 5%, transparent);
+}
+
+@media (max-width: 500px) {
+  .tone-selector {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* --- Resume Template Selector --- */
@@ -562,6 +603,32 @@ input::placeholder { color: var(--placeholder-color); }
 .qna-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .qna-question { font-weight: 600; margin-bottom: 0.75rem; font-size: 1.05rem; }
 .qna-answer { white-space: pre-wrap; word-wrap: break-word; line-height: 1.7; color: var(--text-secondary); }
+
+/* --- Outreach Content Styles --- */
+.outreach-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: var(--font-family);
+  color: var(--text-color);
+}
+.outreach-section h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color-light);
+}
+.outreach-section-body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  background-color: var(--background-color);
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color-light);
+}
 
 /* --- Theme Switcher --- */
 .theme-switcher {

@@ -187,12 +187,15 @@ const App = () => {
   const [generatedResumeData, setGeneratedResumeData] = useState<any>(null);
   const [generatedCoverLetter, setGeneratedCoverLetter] = useState<any>(null);
   const [generatedAnswers, setGeneratedAnswers] = useState<{ question: string; answer: string; }[]>([]);
+  const [generatedRecruiterEmail, setGeneratedRecruiterEmail] = useState<string | null>(null);
+  const [generatedReferralRequest, setGeneratedReferralRequest] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'resume' | 'coverLetter' | 'qna'>('resume');
+  const [activeTab, setActiveTab] = useState<'resume' | 'coverLetter' | 'qna' | 'outreach'>('resume');
   const [copySuccess, setCopySuccess] = useState('');
   const [companyInfo, setCompanyInfo] = useState({ company: 'company', role: 'role' });
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [selectedTone, setSelectedTone] = useState('professional');
   const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
   
   useEffect(() => {
@@ -225,6 +228,9 @@ const App = () => {
     setGeneratedResumeData(null);
     setGeneratedCoverLetter(null);
     setGeneratedAnswers([]);
+    setGeneratedRecruiterEmail(null);
+    setGeneratedReferralRequest(null);
+
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -251,6 +257,7 @@ const App = () => {
       `;
 
       // --- Promise for Resume and Cover Letter ---
+      const toneInstruction = `\n- Adopt a ${selectedTone} tone throughout the letter.`;
       const docsPrompt = `
         You are an expert career coach and professional resume writer.
         Based on the following master document and job description, generate a tailored resume and a compelling cover letter.
@@ -262,7 +269,7 @@ const App = () => {
         - List relevant skills.
         
         For the COVER LETTER:
-        - Make it engaging and explain why the candidate is a perfect fit.
+        - Make it engaging and explain why the candidate is a perfect fit.${toneInstruction}
         - Provide a professional salutation (e.g., "Dear Hiring Manager,").
         - Write 3-4 body paragraphs as an array of strings.
         - Provide a professional closing (e.g., "Sincerely,").
@@ -362,6 +369,33 @@ const App = () => {
           },
         },
       });
+      
+      // --- Promise for Outreach ---
+      const outreachPrompt = `
+          You are an expert career coach. Based on the following master document and job description, generate content for outreach communications.
+  
+          1.  **Recruiter Email:** Write a compelling 2-3 paragraph email to a recruiter. It should introduce the candidate, highlight their key strengths relevant to the role, and express strong interest. The output for this should be a single string with paragraphs separated by '\\n\\n'.
+          2.  **Referral Request:** Write a short, professional, single-paragraph message to ask a contact for a referral. Keep it concise.
+  
+          ${basePromptInfo}
+  
+          Provide the output in JSON format.
+      `;
+      const generateOutreachPromise = ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: outreachPrompt,
+          config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                      recruiterEmail: { type: Type.STRING, description: "The body of the email to the recruiter, with paragraphs separated by newline characters." },
+                      referralRequest: { type: Type.STRING, description: "The concise message asking for a referral." }
+                  },
+                  required: ["recruiterEmail", "referralRequest"]
+              },
+          },
+      });
 
       // --- Promise for Q&A ---
       let generateAnswersPromise = null;
@@ -398,10 +432,11 @@ const App = () => {
       }
 
       // --- Await all promises ---
-      const [docsResult, infoResult, answersResult] = await Promise.all([
+      const [docsResult, infoResult, answersResult, outreachResult] = await Promise.all([
         generateDocsPromise,
         extractInfoPromise,
         generateAnswersPromise,
+        generateOutreachPromise,
       ]);
 
       // Process results
@@ -411,6 +446,10 @@ const App = () => {
 
       const infoJson = JSON.parse(infoResult.text);
       setCompanyInfo({ company: infoJson.companyName, role: infoJson.role });
+
+      const outreachJson = JSON.parse(outreachResult.text);
+      setGeneratedRecruiterEmail(outreachJson.recruiterEmail);
+      setGeneratedReferralRequest(outreachJson.referralRequest);
       
       if (answersResult) {
         const answersJson = JSON.parse(answersResult.text);
@@ -479,6 +518,9 @@ const App = () => {
     } else if (activeTab === 'qna') {
         contentToCopy = generatedAnswers.map(item => `Question: ${item.question}\nAnswer:\n${item.answer}`).join('\n\n');
         tabName = 'Q&A';
+    } else if (activeTab === 'outreach') {
+        contentToCopy = `--- EMAIL TO RECRUITER ---\n\n${generatedRecruiterEmail}\n\n\n--- REFERRAL REQUEST ---\n\n${generatedReferralRequest}`;
+        tabName = 'Outreach Messages';
     }
 
     if (contentToCopy) {
@@ -501,6 +543,10 @@ const App = () => {
         const content = generatedAnswers.map(item => `Question: ${item.question}\nAnswer:\n${item.answer}`).join('\n\n');
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         downloadBlob(blob, 'interview_q&a.txt');
+    } else if (activeTab === 'outreach') {
+        const content = `--- EMAIL TO RECRUITER ---\n\n${generatedRecruiterEmail}\n\n\n--- REFERRAL REQUEST ---\n\n${generatedReferralRequest}`;
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        downloadBlob(blob, 'outreach_messages.txt');
     }
   };
 
@@ -1016,7 +1062,7 @@ const App = () => {
     doc.save(filename);
   };
   
-  const hasContent = generatedResumeData || generatedCoverLetter || generatedAnswers.length > 0;
+  const hasContent = generatedResumeData || generatedCoverLetter || generatedAnswers.length > 0 || generatedRecruiterEmail;
 
   return (
     <>
@@ -1086,6 +1132,21 @@ const App = () => {
                 placeholder="e.g., 'Make the tone more formal', 'Emphasize my project management skills'."
                 aria-label="Custom Instructions"
               />
+            </div>
+            <div className="input-group">
+                <label>Cover Letter Tone</label>
+                <div className="tone-selector">
+                    {['Professional', 'Enthusiastic', 'Formal', 'Friendly'].map(tone => (
+                    <button
+                        key={tone}
+                        className={`tone-option ${selectedTone === tone.toLowerCase() ? 'selected' : ''}`}
+                        onClick={() => setSelectedTone(tone.toLowerCase())}
+                        aria-pressed={selectedTone === tone.toLowerCase()}
+                    >
+                        {tone}
+                    </button>
+                    ))}
+                </div>
             </div>
             <div className="input-group">
               <label htmlFor="company-question">Company-Specific Questions (Optional)</label>
@@ -1165,6 +1226,15 @@ const App = () => {
               >
                 Interview Q&A
               </button>
+              <button 
+                className={`tab ${activeTab === 'outreach' ? 'active' : ''}`}
+                onClick={() => setActiveTab('outreach')}
+                role="tab"
+                aria-selected={activeTab === 'outreach'}
+                aria-controls="outreach-panel"
+              >
+                Outreach
+              </button>
             </div>
             <div className="output-container" role="tabpanel">
                <div className="output-actions">
@@ -1209,6 +1279,18 @@ const App = () => {
                       <p className="qna-answer">{item.answer}</p>
                     </div>
                   ))}
+                </div>
+              )}
+              {activeTab === 'outreach' && generatedRecruiterEmail && generatedReferralRequest && (
+                <div className="outreach-content">
+                    <div className="outreach-section">
+                        <h3>Email to Recruiter</h3>
+                        <div className="outreach-section-body">{generatedRecruiterEmail}</div>
+                    </div>
+                    <div className="outreach-section">
+                        <h3>Referral Request Message</h3>
+                        <div className="outreach-section-body">{generatedReferralRequest}</div>
+                    </div>
                 </div>
               )}
             </div>
