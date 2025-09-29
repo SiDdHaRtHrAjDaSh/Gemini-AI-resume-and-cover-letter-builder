@@ -989,7 +989,6 @@ const App = () => {
     const filename = `${sanitizeFilename(companyInfo.company)}_${sanitizeFilename(companyInfo.role)}_cover_letter.pdf`;
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-    const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 22;
     const usableWidth = pageWidth - (margin * 2);
@@ -1014,49 +1013,40 @@ const App = () => {
     if (fullName || phone || email) {
         doc.setDrawColor('#bdc3c7');
         doc.line(margin, y, pageWidth - margin, y);
-        y += 15;
+        y += 10; // Reduced from 15
     }
 
     doc.setFont('times', 'normal');
-    doc.setFontSize(11);
+    doc.setFontSize(10.5); // Reduced from 11
     doc.setTextColor('#333333');
-    const lineHeight = 6;
+    const lineHeight = 5; // Reduced from 6
 
-    const addPageIfNeeded = () => {
-        if (y > pageHeight - margin) {
-            doc.addPage();
-            y = margin;
-        }
-    };
-    
     const renderText = (text: string, options: { spaceAfter?: number } = {}) => {
-        addPageIfNeeded();
         const lines = doc.splitTextToSize(text, usableWidth);
         lines.forEach((line: string) => {
-            addPageIfNeeded();
             doc.text(line, margin, y);
             y += lineHeight;
         });
-        if(options.spaceAfter) {
+        if(options.spaceAfter !== undefined) {
             y += options.spaceAfter;
         }
     };
 
     // Meta Info
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    renderText(today, { spaceAfter: lineHeight });
+    renderText(today, { spaceAfter: 5 });
 
     renderText("Hiring Manager");
-    renderText(companyInfo.company, { spaceAfter: lineHeight * 2 });
+    renderText(companyInfo.company, { spaceAfter: 8});
 
     // Content
-    renderText(data.salutation, { spaceAfter: lineHeight });
+    renderText(data.salutation, { spaceAfter: 5 });
     
     data.body.forEach((paragraph: string) => {
-      renderText(paragraph, { spaceAfter: lineHeight });
+      renderText(paragraph, { spaceAfter: 5 });
     });
     
-    renderText(data.closing, { spaceAfter: lineHeight * 2 });
+    renderText(data.closing, {spaceAfter: 2});
     renderText(fullName);
 
     doc.save(filename);
