@@ -271,6 +271,7 @@ const App = () => {
         For the COVER LETTER:
         - Make it engaging and explain why the candidate is a perfect fit.${toneInstruction}
         - Provide a professional salutation (e.g., "Dear Hiring Manager,").
+        - if possible, include a paragraph about leadership activities/ student orgs/ volunteering work etc. tha closely aligns with the job description.
         - Write 3-4 body paragraphs as an array of strings.
         - Provide a professional closing (e.g., "Sincerely,").
         - Do not include the applicant's or recipient's contact information, date, or signature in the generated content; this will be added by the template.
