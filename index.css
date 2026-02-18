@@ -667,3 +667,27 @@ input::placeholder { color: var(--placeholder-color); }
   transform: translateX(24px);
   background: #2b2b2b;
 }
+
+/* --- Editable Field Styles --- */
+.editable-field {
+  transition: background-color 0.2s, outline 0.2s;
+  border-radius: 2px;
+  cursor: text;
+}
+.editable-field:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  outline: 1px dashed var(--border-color);
+}
+.editable-field:focus {
+  background-color: var(--background-color);
+  outline: 2px solid var(--primary-color);
+  z-index: 10;
+  position: relative;
+  min-width: 20px;
+}
+[data-theme="dark"] .editable-field:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme="dark"] .editable-field:focus {
+  background-color: var(--background-secondary);
+}

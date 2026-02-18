@@ -8,64 +8,205 @@ import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
 import { jsPDF } from 'jspdf';
 
+// --- Editable Component ---
+
+const Editable = ({ value, onSave, tag: Tag = 'span', className, ...props }: any) => {
+  return (
+    <Tag
+      className={`editable-field ${className || ''}`}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e: React.FocusEvent<HTMLElement>) => {
+        const text = e.currentTarget.innerText;
+        if (text !== value) {
+          onSave(text);
+        }
+      }}
+      {...props}
+    >
+      {value}
+    </Tag>
+  );
+};
+
 // --- Template Components ---
 
-const ModernTemplate = ({ data, fullName, phone, email }: any) => (
+const ModernTemplate = ({ data, fullName, phone, email, onUpdate, onPersonalUpdate }: any) => (
   <div className="resume-modern">
     <header className="resume-header">
-      {fullName && <h1>{fullName}</h1>}
+      {fullName && <Editable tag="h1" value={fullName} onSave={(v: string) => onPersonalUpdate('fullName', v)} />}
       {(phone || email) && (
         <div className="contact-info">
-          {phone && <span>{phone}</span>}
+          {phone && <Editable tag="span" value={phone} onSave={(v: string) => onPersonalUpdate('phone', v)} />}
           {phone && email && <span>&nbsp;•&nbsp;</span>}
-          {email && <span>{email}</span>}
+          {email && <Editable tag="span" value={email} onSave={(v: string) => onPersonalUpdate('email', v)} />}
         </div>
       )}
     </header>
-    {data.summary && <section className="resume-section"><h2>Summary</h2><p>{data.summary}</p></section>}
-    {data.experience?.length > 0 && <section className="resume-section"><h2>Experience</h2>{data.experience.map((job: any, index: number) => (<div key={index} className="job-entry"><div className="job-header"><span className="job-title">{job.title}</span><span className="job-dates">{job.dates}</span></div><div className="job-company"><span>{job.company}</span>{job.location && <span>&nbsp;•&nbsp;{job.location}</span>}</div><ul className="job-description">{job.description.map((point: string, i: number) => <li key={i}>{point}</li>)}</ul></div>))}</section>}
-    {data.education?.length > 0 && <section className="resume-section"><h2>Education</h2>{data.education.map((edu: any, index: number) => (<div key={index} className="education-entry"><div className="job-header"><span className="job-title">{edu.degree}</span><span className="job-dates">{edu.dates}</span></div><div className="job-company">{edu.institution}</div></div>))}</section>}
-    {data.skills?.length > 0 && <section className="resume-section"><h2>Skills</h2><p className="skills-list">{data.skills.join(', ')}</p></section>}
+    {data.summary && (
+      <section className="resume-section">
+        <h2>Summary</h2>
+        <Editable tag="p" value={data.summary} onSave={(v: string) => onUpdate(['summary'], v)} />
+      </section>
+    )}
+    {data.experience?.length > 0 && (
+      <section className="resume-section">
+        <h2>Experience</h2>
+        {data.experience.map((job: any, index: number) => (
+          <div key={index} className="job-entry">
+            <div className="job-header">
+              <Editable tag="span" className="job-title" value={job.title} onSave={(v: string) => onUpdate(['experience', index, 'title'], v)} />
+              <Editable tag="span" className="job-dates" value={job.dates} onSave={(v: string) => onUpdate(['experience', index, 'dates'], v)} />
+            </div>
+            <div className="job-company">
+              <Editable tag="span" value={job.company} onSave={(v: string) => onUpdate(['experience', index, 'company'], v)} />
+              {job.location && (
+                <>
+                  <span>&nbsp;•&nbsp;</span>
+                  <Editable tag="span" value={job.location} onSave={(v: string) => onUpdate(['experience', index, 'location'], v)} />
+                </>
+              )}
+            </div>
+            <ul className="job-description">
+              {job.description.map((point: string, i: number) => (
+                <li key={i}>
+                  <Editable value={point} onSave={(v: string) => onUpdate(['experience', index, 'description', i], v)} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    )}
+    {data.education?.length > 0 && (
+      <section className="resume-section">
+        <h2>Education</h2>
+        {data.education.map((edu: any, index: number) => (
+          <div key={index} className="education-entry">
+            <div className="job-header">
+              <Editable tag="span" className="job-title" value={edu.degree} onSave={(v: string) => onUpdate(['education', index, 'degree'], v)} />
+              <Editable tag="span" className="job-dates" value={edu.dates} onSave={(v: string) => onUpdate(['education', index, 'dates'], v)} />
+            </div>
+            <div className="job-company">
+              <Editable value={edu.institution} onSave={(v: string) => onUpdate(['education', index, 'institution'], v)} />
+            </div>
+          </div>
+        ))}
+      </section>
+    )}
+    {data.skills?.length > 0 && (
+      <section className="resume-section">
+        <h2>Skills</h2>
+        <p className="skills-list">
+          {data.skills.map((skill: string, i: number) => (
+             <React.Fragment key={i}>
+                <Editable tag="span" value={skill} onSave={(v: string) => onUpdate(['skills', i], v)} />
+                {i < data.skills.length - 1 && ', '}
+             </React.Fragment>
+          ))}
+        </p>
+      </section>
+    )}
   </div>
 );
 
-const ClassicTemplate = ({ data, fullName, phone, email }: any) => (
+const ClassicTemplate = ({ data, fullName, phone, email, onUpdate, onPersonalUpdate }: any) => (
   <div className="resume-classic">
     <header className="resume-header-classic">
-      {fullName && <h1>{fullName}</h1>}
+      {fullName && <Editable tag="h1" value={fullName} onSave={(v: string) => onPersonalUpdate('fullName', v)} />}
       <hr />
       {(phone || email) && (
         <div className="contact-info-classic">
-          {phone && <span>{phone}</span>}
-          {phone && email && <span>|</span>}
-          {email && <span>{email}</span>}
+          {phone && <Editable tag="span" value={phone} onSave={(v: string) => onPersonalUpdate('phone', v)} />}
+          {phone && email && <span> | </span>}
+          {email && <Editable tag="span" value={email} onSave={(v: string) => onPersonalUpdate('email', v)} />}
         </div>
       )}
     </header>
-    {data.summary && <section className="resume-section-classic"><h2>SUMMARY</h2><p>{data.summary}</p></section>}
-    {data.experience?.length > 0 && <section className="resume-section-classic"><h2>EXPERIENCE</h2>{data.experience.map((job: any, index: number) => (<div key={index} className="job-entry-classic"><div className="job-header-classic"><h3>{job.title}</h3><span>{job.dates}</span></div><div className="job-company-classic"><span>{job.company} {job.location && `| ${job.location}`}</span></div><ul>{job.description.map((point: string, i: number) => <li key={i}>{point}</li>)}</ul></div>))}</section>}
-    {data.education?.length > 0 && <section className="resume-section-classic"><h2>EDUCATION</h2>{data.education.map((edu: any, index: number) => (<div key={index} className="job-entry-classic"><div className="job-header-classic"><h3>{edu.degree}</h3><span>{edu.dates}</span></div><div className="job-company-classic">{edu.institution}</div></div>))}</section>}
-    {data.skills?.length > 0 && <section className="resume-section-classic"><h2>SKILLS</h2><p>{data.skills.join(' • ')}</p></section>}
+    {data.summary && (
+      <section className="resume-section-classic">
+        <h2>SUMMARY</h2>
+        <Editable tag="p" value={data.summary} onSave={(v: string) => onUpdate(['summary'], v)} />
+      </section>
+    )}
+    {data.experience?.length > 0 && (
+      <section className="resume-section-classic">
+        <h2>EXPERIENCE</h2>
+        {data.experience.map((job: any, index: number) => (
+          <div key={index} className="job-entry-classic">
+            <div className="job-header-classic">
+              <Editable tag="h3" value={job.title} onSave={(v: string) => onUpdate(['experience', index, 'title'], v)} />
+              <Editable tag="span" value={job.dates} onSave={(v: string) => onUpdate(['experience', index, 'dates'], v)} />
+            </div>
+            <div className="job-company-classic">
+               <Editable tag="span" value={job.company} onSave={(v: string) => onUpdate(['experience', index, 'company'], v)} />
+               {job.location && (
+                 <>
+                   {' | '}
+                   <Editable tag="span" value={job.location} onSave={(v: string) => onUpdate(['experience', index, 'location'], v)} />
+                 </>
+               )}
+            </div>
+            <ul>
+              {job.description.map((point: string, i: number) => (
+                <li key={i}>
+                   <Editable value={point} onSave={(v: string) => onUpdate(['experience', index, 'description', i], v)} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    )}
+    {data.education?.length > 0 && (
+      <section className="resume-section-classic">
+        <h2>EDUCATION</h2>
+        {data.education.map((edu: any, index: number) => (
+          <div key={index} className="job-entry-classic">
+            <div className="job-header-classic">
+               <Editable tag="h3" value={edu.degree} onSave={(v: string) => onUpdate(['education', index, 'degree'], v)} />
+               <Editable tag="span" value={edu.dates} onSave={(v: string) => onUpdate(['education', index, 'dates'], v)} />
+            </div>
+            <div className="job-company-classic">
+               <Editable value={edu.institution} onSave={(v: string) => onUpdate(['education', index, 'institution'], v)} />
+            </div>
+          </div>
+        ))}
+      </section>
+    )}
+    {data.skills?.length > 0 && (
+      <section className="resume-section-classic">
+        <h2>SKILLS</h2>
+        <p>
+          {data.skills.map((skill: string, i: number) => (
+             <React.Fragment key={i}>
+                <Editable tag="span" value={skill} onSave={(v: string) => onUpdate(['skills', i], v)} />
+                {i < data.skills.length - 1 && ' • '}
+             </React.Fragment>
+          ))}
+        </p>
+      </section>
+    )}
   </div>
 );
 
-const CreativeTemplate = ({ data, fullName, phone, email }: any) => (
+const CreativeTemplate = ({ data, fullName, phone, email, onUpdate, onPersonalUpdate }: any) => (
   <div className="resume-creative">
     <aside className="creative-sidebar">
-      {fullName && <h1>{fullName}</h1>}
+      {fullName && <Editable tag="h1" value={fullName} onSave={(v: string) => onPersonalUpdate('fullName', v)} />}
       <div className="sidebar-section">
         <h3>Contact</h3>
-        <p>{phone}</p>
-        <p>{email}</p>
+        {phone && <Editable tag="p" value={phone} onSave={(v: string) => onPersonalUpdate('phone', v)} />}
+        {email && <Editable tag="p" value={email} onSave={(v: string) => onPersonalUpdate('email', v)} />}
       </div>
       {data.education?.length > 0 && (
         <div className="sidebar-section">
           <h3>Education</h3>
           {data.education.map((edu: any, index: number) => (
             <div key={index} className="education-entry-creative">
-              <h4>{edu.degree}</h4>
-              <p>{edu.institution}</p>
-              <p className="dates">{edu.dates}</p>
+              <Editable tag="h4" value={edu.degree} onSave={(v: string) => onUpdate(['education', index, 'degree'], v)} />
+              <Editable tag="p" value={edu.institution} onSave={(v: string) => onUpdate(['education', index, 'institution'], v)} />
+              <Editable tag="p" className="dates" value={edu.dates} onSave={(v: string) => onUpdate(['education', index, 'dates'], v)} />
             </div>
           ))}
         </div>
@@ -73,13 +214,52 @@ const CreativeTemplate = ({ data, fullName, phone, email }: any) => (
       {data.skills?.length > 0 && (
         <div className="sidebar-section">
           <h3>Skills</h3>
-          <ul>{data.skills.map((skill: string, i: number) => <li key={i}>{skill}</li>)}</ul>
+          <ul>
+            {data.skills.map((skill: string, i: number) => (
+              <li key={i}>
+                 <Editable tag="span" value={skill} onSave={(v: string) => onUpdate(['skills', i], v)} />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </aside>
     <main className="creative-main">
-      {data.summary && <section className="main-section"><h2>Summary</h2><p>{data.summary}</p></section>}
-      {data.experience?.length > 0 && <section className="main-section"><h2>Experience</h2>{data.experience.map((job: any, index: number) => (<div key={index} className="job-entry-creative"><div className="job-header-creative"><h4>{job.title}</h4><span className="dates">{job.dates}</span></div><h5>{job.company}{job.location && ` | ${job.location}`}</h5><ul>{job.description.map((point: string, i: number) => <li key={i}>{point}</li>)}</ul></div>))}</section>}
+      {data.summary && (
+        <section className="main-section">
+          <h2>Summary</h2>
+          <Editable tag="p" value={data.summary} onSave={(v: string) => onUpdate(['summary'], v)} />
+        </section>
+      )}
+      {data.experience?.length > 0 && (
+        <section className="main-section">
+          <h2>Experience</h2>
+          {data.experience.map((job: any, index: number) => (
+            <div key={index} className="job-entry-creative">
+              <div className="job-header-creative">
+                <Editable tag="h4" value={job.title} onSave={(v: string) => onUpdate(['experience', index, 'title'], v)} />
+                <Editable tag="span" className="dates" value={job.dates} onSave={(v: string) => onUpdate(['experience', index, 'dates'], v)} />
+              </div>
+              <h5>
+                 <Editable tag="span" value={job.company} onSave={(v: string) => onUpdate(['experience', index, 'company'], v)} />
+                 {job.location && (
+                   <>
+                     {' | '}
+                     <Editable tag="span" value={job.location} onSave={(v: string) => onUpdate(['experience', index, 'location'], v)} />
+                   </>
+                 )}
+              </h5>
+              <ul>
+                {job.description.map((point: string, i: number) => (
+                  <li key={i}>
+                    <Editable value={point} onSave={(v: string) => onUpdate(['experience', index, 'description', i], v)} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
     </main>
   </div>
 );
@@ -90,22 +270,26 @@ const StyledResume = ({
   data,
   fullName,
   phone,
-  email
+  email,
+  onUpdate,
+  onPersonalUpdate
 }: {
   template: string;
   data: any;
   fullName: string;
   phone: string;
   email: string;
+  onUpdate: (path: (string | number)[], value: any) => void;
+  onPersonalUpdate: (field: string, value: string) => void;
 }) => {
   switch (template) {
     case 'classic':
-      return <ClassicTemplate data={data} fullName={fullName} phone={phone} email={email} />;
+      return <ClassicTemplate data={data} fullName={fullName} phone={phone} email={email} onUpdate={onUpdate} onPersonalUpdate={onPersonalUpdate} />;
     case 'creative':
-      return <CreativeTemplate data={data} fullName={fullName} phone={phone} email={email} />;
+      return <CreativeTemplate data={data} fullName={fullName} phone={phone} email={email} onUpdate={onUpdate} onPersonalUpdate={onPersonalUpdate} />;
     case 'modern':
     default:
-      return <ModernTemplate data={data} fullName={fullName} phone={phone} email={email} />;
+      return <ModernTemplate data={data} fullName={fullName} phone={phone} email={email} onUpdate={onUpdate} onPersonalUpdate={onPersonalUpdate} />;
   }
 };
 
@@ -115,12 +299,18 @@ const CoverLetter = ({
   phone,
   email,
   companyInfo,
+  onUpdate,
+  onPersonalUpdate,
+  onCompanyUpdate
 }: {
   data: { salutation: string; body: string[]; closing: string };
   fullName: string;
   phone: string;
   email: string;
   companyInfo: { company: string; role: string };
+  onUpdate: (path: (string | number)[], value: any) => void;
+  onPersonalUpdate: (field: string, value: string) => void;
+  onCompanyUpdate: (field: string, value: string) => void;
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -131,13 +321,13 @@ const CoverLetter = ({
   return (
     <div className="cover-letter-styled">
       <header className="cover-letter-header">
-        {fullName && <h1 className="cl-name">{fullName}</h1>}
+        {fullName && <Editable tag="h1" className="cl-name" value={fullName} onSave={(v: string) => onPersonalUpdate('fullName', v)} />}
         <div className="cl-contact-info">
-          {phone && <span className="cl-contact-item">{phone}</span>}
+          {phone && <Editable tag="span" className="cl-contact-item" value={phone} onSave={(v: string) => onPersonalUpdate('phone', v)} />}
           {phone && email && (
             <span className="cl-contact-separator">&nbsp;&bull;&nbsp;</span>
           )}
-          {email && <span className="cl-contact-item">{email}</span>}
+          {email && <Editable tag="span" className="cl-contact-item" value={email} onSave={(v: string) => onPersonalUpdate('email', v)} />}
         </div>
       </header>
 
@@ -146,18 +336,22 @@ const CoverLetter = ({
           <p className="cover-letter-date">{today}</p>
           <div className="cover-letter-recipient-info">
             <p>Hiring Manager</p>
-            <p>{companyInfo.company}</p>
+            <p><Editable tag="span" value={companyInfo.company} onSave={(v: string) => onCompanyUpdate('company', v)} /></p>
           </div>
         </div>
 
         <div className="cover-letter-content">
-          {data.salutation && <p className="cover-letter-salutation">{data.salutation}</p>}
+          {data.salutation && <Editable tag="p" className="cover-letter-salutation" value={data.salutation} onSave={(v: string) => onUpdate(['salutation'], v)} />}
           {data.body?.map((paragraph, index) => (
-            <p key={index} className="cover-letter-paragraph">
-              {paragraph}
-            </p>
+            <Editable 
+              key={index} 
+              tag="p" 
+              className="cover-letter-paragraph" 
+              value={paragraph} 
+              onSave={(v: string) => onUpdate(['body', index], v)} 
+            />
           ))}
-          {data.closing && <p className="cover-letter-closing">{data.closing}</p>}
+          {data.closing && <Editable tag="p" className="cover-letter-closing" value={data.closing} onSave={(v: string) => onUpdate(['closing'], v)} />}
           {fullName && <p className="cover-letter-signature">{fullName}</p>}
         </div>
       </div>
@@ -217,6 +411,44 @@ const App = () => {
   const handleRemoveQuestion = (indexToRemove: number) => {
     setQuestions(questions.filter((_, index) => index !== indexToRemove));
   };
+
+  // State update handlers for editable fields
+  const handleResumeUpdate = (path: (string | number)[], value: any) => {
+    setGeneratedResumeData((prev: any) => {
+        if (!prev) return prev;
+        const newData = JSON.parse(JSON.stringify(prev));
+        let current = newData;
+        for (let i = 0; i < path.length - 1; i++) {
+            current = current[path[i]];
+        }
+        current[path[path.length - 1]] = value;
+        return newData;
+    });
+  };
+
+  const handleCoverLetterUpdate = (path: (string | number)[], value: any) => {
+    setGeneratedCoverLetter((prev: any) => {
+        if (!prev) return prev;
+        const newData = JSON.parse(JSON.stringify(prev));
+        let current = newData;
+        for (let i = 0; i < path.length - 1; i++) {
+            current = current[path[i]];
+        }
+        current[path[path.length - 1]] = value;
+        return newData;
+    });
+  };
+
+  const handlePersonalUpdate = (field: string, value: string) => {
+    if (field === 'fullName') setFullName(value);
+    if (field === 'phone') setPhone(value);
+    if (field === 'email') setEmail(value);
+  };
+
+  const handleCompanyUpdate = (field: string, value: string) => {
+    setCompanyInfo(prev => ({ ...prev, [field]: value }));
+  };
+
 
   const handleGenerate = async () => {
     if (!masterDocument || !jobDescription) {
@@ -1253,6 +1485,8 @@ const App = () => {
                   fullName={fullName}
                   phone={phone}
                   email={email}
+                  onUpdate={handleResumeUpdate}
+                  onPersonalUpdate={handlePersonalUpdate}
                 />
               )}
               {activeTab === 'coverLetter' && generatedCoverLetter && (
@@ -1262,6 +1496,9 @@ const App = () => {
                   phone={phone}
                   email={email}
                   companyInfo={companyInfo}
+                  onUpdate={handleCoverLetterUpdate}
+                  onPersonalUpdate={handlePersonalUpdate}
+                  onCompanyUpdate={handleCompanyUpdate}
                 />
               )}
               {activeTab === 'qna' && generatedAnswers.length > 0 && (
